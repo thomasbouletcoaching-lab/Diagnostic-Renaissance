@@ -188,6 +188,10 @@
         <input type="text" id="capturePrenom" placeholder="Ton prénom">
       </div>
       <div class="form-field">
+        <label>Nom</label>
+        <input type="text" id="captureNom" placeholder="Ton nom">
+      </div>
+      <div class="form-field">
         <label>Email</label>
         <input type="email" id="captureEmail" placeholder="ton@email.com">
       </div>
@@ -699,6 +703,7 @@ function showCapture(){
 =========================== */
 async function submitCapture(){
   const prenom = document.getElementById('capturePrenom').value.trim();
+  const nom = document.getElementById('captureNom').value.trim();
   const email = document.getElementById('captureEmail').value.trim();
   const tel = document.getElementById('captureTel').value.trim();
   const submitBtn = document.querySelector('#screen-capture .btn-submit');
@@ -708,7 +713,7 @@ async function submitCapture(){
     return;
   }
 
-  state.lead = { prenom, email, tel };
+  state.lead = { prenom, nom, email, tel };
 
   // Petit feedback visuel pendant l'envoi, pour éviter les double-clics
   // et montrer que quelque chose se passe (réseau parfois lent en mobile)
@@ -733,6 +738,7 @@ async function sendToBrevo(state){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prenom: state.lead.prenom,
+        nom: state.lead.nom,
         email: state.lead.email,
         tel: state.lead.tel,
         objectif: state.objectif,
