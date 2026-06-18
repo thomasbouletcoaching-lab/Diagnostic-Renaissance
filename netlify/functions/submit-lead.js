@@ -22,7 +22,7 @@ exports.handler = async function (event) {
     };
   }
 
-  const { prenom, email, tel, objectif, niveau, source, listId } = data;
+  const { prenom, nom, email, tel, objectif, niveau, source, listId } = data;
 
   if (!prenom || !email) {
     return {
@@ -44,6 +44,7 @@ exports.handler = async function (event) {
   const attributes = {
     FIRSTNAME: prenom,
   };
+  if (nom) attributes.LASTNAME = nom;
   if (tel) {
     // Format attendu par Brevo : sans le 0 initial, avec indicatif pays
     // On suppose un numéro français par défaut (33), tout en gardant
