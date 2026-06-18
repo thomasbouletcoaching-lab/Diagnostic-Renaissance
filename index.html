@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Diagnostic Renaissance — Thomas Boulet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B1220;
+    --paper:#F2F0EB;
+    --paper-dim:#C9C6BD;
+    --rust:#C8551B;
+    --rust-bright:#E2682A;
+    --slate:#5A6472;
+    --line:rgba(242,240,235,0.12);
+    --radius:2px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--navy);color:var(--paper);font-family:'Inter',sans-serif;height:100%;overflow-x:hidden;}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:0.01ms !important; transition-duration:0.01ms !important;}}
+
+  .bg-texture{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(ellipse 80% 50% at 50% -10%, rgba(200,85,27,0.10), transparent), var(--navy);}
+
+  .app{position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; max-width:640px; margin:0 auto; padding:0 24px;}
+
+  .top{padding:28px 0 18px; display:flex; align-items:center; gap:14px;}
+  .brand{font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; color:var(--paper-dim); white-space:nowrap;}
+  .gauge-track{flex:1; height:6px; background:rgba(242,240,235,0.08); border-radius:1px; position:relative; overflow:hidden;}
+  .gauge-fill{position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg, var(--rust), var(--rust-bright)); transition:width 0.5s cubic-bezier(.65,0,.35,1);}
+  .gauge-label{font-family:'Archivo Expanded',sans-serif; font-size:12px; font-weight:700; color:var(--rust-bright); min-width:40px; text-align:right;}
+
+  .stage{flex:1; display:flex; flex-direction:column; justify-content:center; padding:24px 0 48px;}
+  .screen{display:none; animation:rise 0.5s cubic-bezier(.16,1,.3,1) forwards;}
+  .screen.active{display:block;}
+  @keyframes rise{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);}}
+
+  .section-tag{font-family:'Archivo Expanded',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--rust-bright); margin-bottom:16px; display:flex; align-items:center; gap:10px;}
+  .section-tag::before{content:''; width:18px; height:1px; background:var(--rust-bright);}
+
+  .q-text{font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:clamp(22px, 5.5vw, 30px); line-height:1.18; letter-spacing:-0.01em; color:var(--paper); margin-bottom:8px;}
+  .q-sub{font-size:15px; color:var(--slate); margin-bottom:28px; line-height:1.5;}
+
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .opt{text-align:left; background:rgba(242,240,235,0.03); border:1px solid var(--line); color:var(--paper); font-family:'Inter',sans-serif; font-size:16px; font-weight:500; padding:17px 20px; border-radius:var(--radius); cursor:pointer; transition:border-color 0.2s, background 0.2s, transform 0.15s; display:flex; align-items:center; justify-content:space-between; gap:12px;}
+  .opt:hover{border-color:rgba(200,85,27,0.5); background:rgba(200,85,27,0.06);}
+  .opt:active{transform:scale(0.99);}
+  .opt.selected{border-color:var(--rust); background:rgba(200,85,27,0.12);}
+  .opt-arrow{color:var(--rust-bright); opacity:0; transition:opacity 0.2s; flex-shrink:0;}
+  .opt:hover .opt-arrow, .opt.selected .opt-arrow{opacity:1;}
+
+  .slider-wrap{margin-top:8px;}
+  .slider-value{font-family:'Archivo Expanded',sans-serif; font-size:52px; font-weight:800; color:var(--rust-bright); text-align:center; margin-bottom:8px; line-height:1;}
+  input[type=range]{width:100%; height:6px; -webkit-appearance:none; background:rgba(242,240,235,0.1); border-radius:1px; outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:26px; height:26px; border-radius:50%; background:var(--rust); border:3px solid var(--paper); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.4);}
+  input[type=range]::-moz-range-thumb{width:26px; height:26px; border-radius:50%; background:var(--rust); border:3px solid var(--paper); cursor:pointer;}
+  .slider-scale{display:flex; justify-content:space-between; font-size:12px; color:var(--slate); margin-top:8px;}
+  .slider-confirm{margin-top:24px; width:100%; background:var(--rust); color:var(--paper); border:none; font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.04em; text-transform:uppercase; padding:18px; border-radius:var(--radius); cursor:pointer; transition:background 0.2s;}
+  .slider-confirm:hover{background:var(--rust-bright);}
+
+  .num-input{width:100%; background:rgba(242,240,235,0.03); border:1px solid var(--line); color:var(--paper); font-family:'Inter',sans-serif; font-size:24px; font-weight:600; padding:18px 20px; border-radius:var(--radius); outline:none; margin-bottom:20px;}
+  .num-input:focus{border-color:var(--rust);}
+  .num-input::placeholder{color:var(--slate);}
+
+  .nav-row{display:flex; justify-content:space-between; margin-top:24px; align-items:center;}
+  .btn-back{background:none; border:none; color:var(--slate); font-size:14px; cursor:pointer; padding:8px 0;}
+  .btn-back:hover{color:var(--paper);}
+  .btn-next{background:var(--rust); color:var(--paper); border:none; font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.04em; text-transform:uppercase; padding:14px 28px; border-radius:var(--radius); cursor:pointer;}
+  .btn-next:hover{background:var(--rust-bright);}
+
+  .intro{text-align:left;}
+  .intro-eyebrow{font-family:'Archivo Expanded',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--rust-bright); margin-bottom:20px;}
+  .intro-title{font-family:'Archivo Expanded',sans-serif; font-weight:800; font-size:clamp(32px, 8vw, 48px); line-height:1.05; letter-spacing:-0.02em; margin-bottom:20px;}
+  .intro-title em{color:var(--rust-bright); font-style:normal;}
+  .intro-desc{font-size:17px; line-height:1.6; color:var(--paper-dim); margin-bottom:36px; max-width:480px;}
+  .intro-meta{display:flex; gap:24px; margin-bottom:36px; flex-wrap:wrap;}
+  .intro-meta-item{display:flex; flex-direction:column; gap:4px;}
+  .intro-meta-num{font-family:'Archivo Expanded',sans-serif; font-weight:800; font-size:22px; color:var(--paper);}
+  .intro-meta-label{font-size:12px; color:var(--slate); text-transform:uppercase; letter-spacing:0.05em;}
+  .btn-start{background:var(--rust); color:var(--paper); border:none; font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.04em; text-transform:uppercase; padding:20px 36px; border-radius:var(--radius); cursor:pointer; transition:background 0.2s, transform 0.15s; display:inline-flex; align-items:center; gap:10px;}
+  .btn-start:hover{background:var(--rust-bright); transform:translateX(2px);}
+
+  /* RDV banner — shown when priority signal detected */
+  .rdv-banner{
+    background:rgba(200,85,27,0.1);
+    border:1px solid rgba(200,85,27,0.4);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    margin-bottom:24px;
+    font-size:14px;
+    line-height:1.5;
+    display:none;
+  }
+  .rdv-banner.show{display:block;}
+  .rdv-banner a{color:var(--rust-bright); font-weight:700; text-decoration:underline;}
+
+  /* capture form */
+  .form-field{margin-bottom:16px;}
+  .form-field label{display:block; font-size:13px; color:var(--slate); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .form-field input{width:100%; background:rgba(242,240,235,0.03); border:1px solid var(--line); color:var(--paper); font-family:'Inter',sans-serif; font-size:16px; padding:16px 18px; border-radius:var(--radius); outline:none;}
+  .form-field input:focus{border-color:var(--rust);}
+  .btn-submit{margin-top:12px; width:100%; background:var(--rust); color:var(--paper); border:none; font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.04em; text-transform:uppercase; padding:19px; border-radius:var(--radius); cursor:pointer; transition:background 0.2s;}
+  .btn-submit:hover{background:var(--rust-bright);}
+  .form-note{font-size:12px; color:var(--slate); margin-top:14px; text-align:center; line-height:1.5;}
+
+  .result-tag{font-family:'Archivo Expanded',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--rust-bright); margin-bottom:14px;}
+  .result-title{font-family:'Archivo Expanded',sans-serif; font-weight:800; font-size:clamp(28px, 7vw, 38px); line-height:1.1; margin-bottom:24px;}
+  .result-body p{font-size:16px; line-height:1.7; color:var(--paper-dim); margin-bottom:18px;}
+  .result-body strong{color:var(--paper);}
+  .result-ctas{display:flex; flex-direction:column; gap:12px; margin-top:32px;}
+  .cta-primary, .cta-secondary{display:flex; align-items:center; justify-content:center; gap:10px; padding:19px 24px; border-radius:var(--radius); font-family:'Archivo Expanded',sans-serif; font-weight:700; font-size:14px; letter-spacing:0.03em; text-transform:uppercase; text-decoration:none; cursor:pointer; transition:all 0.2s;}
+  .cta-primary{background:var(--rust); color:var(--paper); border:1px solid var(--rust);}
+  .cta-primary:hover{background:var(--rust-bright);}
+  .cta-secondary{background:transparent; color:var(--paper); border:1px solid var(--line);}
+  .cta-secondary:hover{border-color:var(--paper-dim);}
+  .cta-urgent{
+    background:var(--rust-bright);
+    color:var(--paper);
+    border:2px solid var(--rust-bright);
+    font-size:16px;
+    padding:24px 24px;
+    box-shadow:0 0 0 4px rgba(226,104,42,0.18);
+    animation:pulse 2.2s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 4px rgba(226,104,42,0.18);}
+    50%{box-shadow:0 0 0 8px rgba(226,104,42,0.28);}
+  }
+
+  .restart{text-align:center; margin-top:40px;}
+  .restart a{color:var(--slate); font-size:13px; text-decoration:underline; cursor:pointer;}
+  .restart a:hover{color:var(--paper-dim);}
+
+  footer{text-align:center; padding:20px 0 32px; font-size:12px; color:var(--slate);}
+
+  @media (max-width:480px){
+    .app{padding:0 20px;}
+    .opt{padding:15px 16px; font-size:15px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-texture"></div>
+
+<div class="app">
+
+  <div class="top" id="topBar" style="display:none;">
+    <span class="brand">T. BOULET</span>
+    <div class="gauge-track"><div class="gauge-fill" id="gaugeFill"></div></div>
+    <span class="gauge-label" id="gaugeLabel">0%</span>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <!-- INTRO -->
+    <div class="screen active" id="screen-intro">
+      <div class="intro">
+        <div class="intro-eyebrow">Diagnostic Renaissance — 3 minutes</div>
+        <div class="intro-title">Où en es-tu <em>vraiment</em> ?</div>
+        <p class="intro-desc">Réponds honnêtement. À la fin, tu sais précisément ce qui te bloque, et quelle est la prochaine étape la plus adaptée à ta situation — pas un conseil générique.</p>
+        <div class="intro-meta">
+          <div class="intro-meta-item"><span class="intro-meta-num">3 min</span><span class="intro-meta-label">Pour répondre</span></div>
+          <div class="intro-meta-item"><span class="intro-meta-num">100%</span><span class="intro-meta-label">Personnalisé</span></div>
+          <div class="intro-meta-item"><span class="intro-meta-num">1</span><span class="intro-meta-label">Plan d'action</span></div>
+        </div>
+        <button class="btn-start" onclick="startQuiz()">Commencer le diagnostic →</button>
+      </div>
+    </div>
+
+    <div id="quizContainer"></div>
+
+    <!-- CAPTURE FORM -->
+    <div class="screen" id="screen-capture">
+      <div class="section-tag">Dernière étape</div>
+      <div class="q-text">Ton diagnostic est prêt.</div>
+      <div class="q-sub">Entre tes coordonnées pour le recevoir et débloquer ton plan d'action personnalisé.</div>
+
+      <div class="rdv-banner" id="rdvBanner">
+        Tu sembles prêt à passer à l'étape suivante — tu peux aussi réserver directement ton bilan ici : <a href="https://calendly.com/thomboulet/15min" target="_blank">réserver maintenant</a>
+      </div>
+
+      <div class="form-field">
+        <label>Prénom</label>
+        <input type="text" id="capturePrenom" placeholder="Ton prénom">
+      </div>
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="captureEmail" placeholder="ton@email.com">
+      </div>
+      <div class="form-field">
+        <label>Téléphone</label>
+        <input type="tel" id="captureTel" placeholder="06 12 34 56 78">
+      </div>
+      <button class="btn-submit" onclick="submitCapture()">Voir mon résultat →</button>
+      <div class="form-note">Tes informations restent confidentielles et ne seront jamais partagées.</div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="screen" id="screen-result">
+      <div class="result-tag" id="resultTag">Ton diagnostic</div>
+      <h1 class="result-title" id="resultTitle"></h1>
+      <div class="result-body" id="resultBody"></div>
+      <div class="result-ctas" id="resultCtas"></div>
+      <div class="restart"><a onclick="restartQuiz()">Refaire le diagnostic</a></div>
+    </div>
+
+  </div>
+
+  <footer>Thomas Boulet — Coach Transformation · Diplôme STAPS</footer>
+</div>
+
+<script>
+/* ===========================
+   CONFIG
+=========================== */
+const LINKS = {
+  calendly: "https://calendly.com/thomboulet/15min",
+  candidature: "https://docs.google.com/forms/d/e/1FAIpQLSeRaQXanvFwNU5mFpbec-RgIl6aU3pCwoiYK9z30jt8SzXRaQ/viewform",
+  ebookEmail: "mailto:thomasboulet.coaching@gmail.com?subject=" + encodeURIComponent("Demande de l'ebook Être Sec et Musclé Après 30 Ans") + "&body=" + encodeURIComponent("Salut Thomas,\n\nJ'ai fait ton diagnostic, je veux recevoir l'ebook \"Être Sec et Musclé Après 30 Ans — Et Le Rester à Vie\".\n\nMerci !")
+};
+
+// ID de la liste Brevo "Leads Diagnostic" — à remplacer par le vrai ID
+// une fois la liste créée dans Brevo (Contacts → Listes → cliquer sur
+// la liste → l'ID apparaît dans l'URL ou les paramètres).
+const LISTE_BREVO_DIAGNOSTIC = "5";
+
+/* ===========================
+   STATE
+=========================== */
+let state = {
+  objectif: null,        // 'poids' | 'muscle' | 'recomp' | 'forme'
+  engagementScore: 0,    // raw sum
+  prioriteRdv: false,    // signal detected mid-quiz
+  answers: {}
+};
+
+/* ===========================
+   SOCLE COMMUN (toujours posé)
+=========================== */
+const socleAvantObjectif = [
+  {
+    id: "genre",
+    section: "Profil",
+    text: "Tu es :",
+    type: "single",
+    options: [
+      {label:"Un homme", value:"homme"},
+      {label:"Une femme", value:"femme"}
+    ]
+  },
+  {
+    id: "age",
+    section: "Profil",
+    text: "Ton âge ?",
+    type: "single",
+    options: [
+      {label:"Moins de 25 ans", value:"<25"},
+      {label:"25-29 ans", value:"25-29"},
+      {label:"30-35 ans", value:"30-35"},
+      {label:"36-40 ans", value:"36-40"},
+      {label:"Plus de 40 ans", value:">40"}
+    ]
+  },
+  {
+    id: "poids",
+    section: "Profil",
+    text: "Ton poids actuel ?",
+    sub: "En kilogrammes.",
+    type: "number",
+    placeholder: "Ex: 78",
+    unit: "kg"
+  },
+  {
+    id: "taille",
+    section: "Profil",
+    text: "Ta taille ?",
+    sub: "En centimètres.",
+    type: "number",
+    placeholder: "Ex: 178",
+    unit: "cm"
+  },
+  {
+    id: "objectif",
+    section: "Profil",
+    text: "Aujourd'hui, ton objectif principal c'est :",
+    type: "single",
+    isObjectifQuestion: true,
+    options: [
+      {label:"Perdre du poids, perdre du ventre", value:"poids"},
+      {label:"Prendre du muscle, de la masse", value:"muscle"},
+      {label:"Perdre du gras ET prendre du muscle en même temps", value:"recomp"},
+      {label:"Me sentir mieux dans mon corps, retrouver la forme", value:"forme"}
+    ]
+  }
+];
+
+const socleEmotionnel = [
+  {
+    id: "duree",
+    section: "Le problème réel",
+    text: "Depuis combien de temps cet objectif te préoccupe ?",
+    type: "single",
+    options: [
+      {label:"Quelques semaines, c'est récent", pts:0},
+      {label:"Quelques mois", pts:1},
+      {label:"1 à 2 ans", pts:2},
+      {label:"Plus de 3 ans", pts:3},
+      {label:"Je ne me souviens même plus d'un moment où ça n'était pas un sujet", pts:4}
+    ]
+  },
+  {
+    id: "miroir",
+    section: "Le problème réel",
+    text: "Quand tu te regardes dans le miroir, honnêtement, tu te dis :",
+    type: "single",
+    options: [
+      {label:"\"Bon, ça va, c'est pas si grave\"", pts:0},
+      {label:"\"Je ne me reconnais plus complètement\"", pts:1},
+      {label:"\"Je détourne le regard, ça me met mal à l'aise\"", pts:2},
+      {label:"\"Je ressens une vraie détresse, ça me ronge\"", pts:4}
+    ]
+  },
+  {
+    id: "impact",
+    section: "Le problème réel",
+    text: "Est-ce que ton corps actuel impacte ta vie — confiance, couple, travail, vie sociale ?",
+    type: "single",
+    options: [
+      {label:"Pas vraiment, c'est plus esthétique", pts:0},
+      {label:"Un peu, dans certaines situations précises", pts:1},
+      {label:"Oui, clairement, ça me freine au quotidien", pts:3, signal:true},
+      {label:"Oui, et ça affecte d'autres domaines (santé, sommeil, humeur)", pts:4, signal:true}
+    ]
+  },
+  {
+    id: "blocage",
+    section: "Le problème réel",
+    text: "Qu'est-ce qui t'a empêché de réussir jusqu'ici ?",
+    type: "single",
+    options: [
+      {label:"Je n'ai jamais vraiment essayé sérieusement", pts:1},
+      {label:"J'ai essayé mais j'ai abandonné en cours de route", pts:2},
+      {label:"J'ai des résultats puis je reprends tout (effet yoyo)", pts:3},
+      {label:"Je ne sais même pas par où commencer", pts:2, signal:true},
+      {label:"Le manque de temps réel dans mon quotidien", pts:2}
+    ]
+  },
+  {
+    id: "projection",
+    section: "La projection",
+    text: "Dans 5 ans, si rien ne change, tu te vois comment ?",
+    type: "single",
+    options: [
+      {label:"Probablement pareil", pts:1},
+      {label:"Un peu pire, et ça m'inquiète", pts:3},
+      {label:"Je préfère ne pas y penser, ça m'angoisse déjà", pts:4},
+      {label:"Je sais que ce serait grave pour ma santé/mon couple/ma vie", pts:5, signal:true}
+    ]
+  },
+  {
+    id: "envie",
+    section: "La projection",
+    text: "Sur 10, ton envie RIGHT NOW de changer les choses, pour de vrai ?",
+    sub: "Déplace le curseur.",
+    type: "slider",
+    min:1, max:10
+  },
+  {
+    id: "accompagnement",
+    section: "Barrières & ressources",
+    text: "Tu préfères :",
+    type: "single",
+    options: [
+      {label:"Avoir les bons outils et avancer seul à mon rythme", pts:1},
+      {label:"Être accompagné de A à Z par un coach", pts:3, signal:true}
+    ]
+  }
+];
+
+/* ===========================
+   BRANCHES PAR OBJECTIF
+=========================== */
+const branches = {
+  poids: [
+    {
+      id:"alim_poids", section:"Perte de poids", text:"Ton alimentation aujourd'hui, c'est plutôt :", type:"single",
+      options:[
+        {label:"Je grignote beaucoup, sans structure"},
+        {label:"Je mange correctement mais en trop grande quantité"},
+        {label:"Je fais déjà attention mais ça ne bouge pas"},
+        {label:"J'ai déjà essayé plusieurs régimes, sans succès durable"}
+      ]
+    },
+    {
+      id:"peur_poids", section:"Perte de poids", text:"Ta plus grande peur concernant la perte de poids :", type:"single",
+      options:[
+        {label:"Ne jamais réussir à perdre"},
+        {label:"Perdre puis tout reprendre (effet yoyo)"},
+        {label:"Perdre du poids mais avoir un corps \"mou\", sans forme"},
+        {label:"Devoir me priver à vie pour maintenir le résultat"}
+      ]
+    },
+    {
+      id:"regime_poids", section:"Perte de poids", text:"As-tu déjà fait un régime restrictif qui a mal fini (reprise, frustration) ?", type:"single",
+      options:[
+        {label:"Oui, plusieurs fois", pts:2},
+        {label:"Oui, une fois", pts:1},
+        {label:"Non, jamais essayé sérieusement", pts:0}
+      ]
+    }
+  ],
+  muscle: [
+    {
+      id:"historique_muscle", section:"Prise de muscle", text:"Ton historique d'entraînement :", type:"single",
+      options:[
+        {label:"Je n'ai jamais soulevé de poids sérieusement"},
+        {label:"Je m'entraîne depuis moins d'un an"},
+        {label:"Je m'entraîne depuis plus d'un an mais je stagne"},
+        {label:"Je m'entraîne depuis des années, je veux passer un cap"}
+      ]
+    },
+    {
+      id:"frustration_muscle", section:"Prise de muscle", text:"Ta plus grande frustration actuelle :", type:"single",
+      options:[
+        {label:"Je ne vois aucun résultat malgré mes efforts à la salle"},
+        {label:"Je ne sais pas si je mange assez (ou trop) pour progresser"},
+        {label:"Je stagne sur mes charges depuis des mois"},
+        {label:"Je n'ai pas de structure, je m'entraîne \"au feeling\""}
+      ]
+    },
+    {
+      id:"programme_muscle", section:"Prise de muscle", text:"As-tu déjà suivi un programme structuré de musculation (pas juste \"aller à la salle\") ?", type:"single",
+      options:[
+        {label:"Non, jamais", pts:1},
+        {label:"Oui, mais je ne l'ai jamais terminé", pts:2},
+        {label:"Oui, plusieurs fois, sans résultats satisfaisants", pts:2}
+      ]
+    }
+  ],
+  recomp: [
+    {
+      id:"frustration_recomp", section:"Recomposition", text:"Ce qui te frustre le plus dans ta situation actuelle :", type:"single",
+      options:[
+        {label:"J'ai du gras ET pas assez de muscle visible, je ne sais pas par où commencer"},
+        {label:"Quand je perds du poids, je perds aussi mon muscle"},
+        {label:"Quand je prends du muscle, je prends aussi du gras"},
+        {label:"Je n'ai jamais réussi à faire les deux en même temps"}
+      ]
+    },
+    {
+      id:"cut_bulk_recomp", section:"Recomposition", text:"As-tu déjà essayé de faire un \"cut\" (perte de gras) et une \"prise de masse\" séparément ?", type:"single",
+      options:[
+        {label:"Non, je n'ai jamais structuré ça"},
+        {label:"Oui, mais sans résultat satisfaisant", pts:1},
+        {label:"Oui, et ça a fonctionné un temps, puis j'ai tout perdu", pts:2}
+      ]
+    },
+    {
+      id:"connaissance_recomp", section:"Recomposition", text:"Ta connaissance de la nutrition sportive (calories, macros) :", type:"single",
+      options:[
+        {label:"Aucune notion"},
+        {label:"Des notions de base, mal appliquées"},
+        {label:"Bonne théorie, mais difficile à appliquer au quotidien"}
+      ]
+    }
+  ],
+  forme: [
+    {
+      id:"motivation_forme", section:"Remise en forme", text:"Ce qui te motive le plus dans cette remise en forme :", type:"single",
+      options:[
+        {label:"Mon énergie au quotidien (fatigue, sommeil)"},
+        {label:"Ma santé à long terme (prévention, marqueurs de santé)"},
+        {label:"Me sentir capable physiquement (escaliers, jouer avec mes enfants...)"},
+        {label:"Retrouver une routine de vie plus saine globalement"}
+      ]
+    },
+    {
+      id:"activite_forme", section:"Remise en forme", text:"Ton niveau d'activité physique actuel :", type:"single",
+      options:[
+        {label:"Quasiment sédentaire", pts:1},
+        {label:"Quelques marches/activités occasionnelles"},
+        {label:"Une activité régulière mais légère"},
+        {label:"J'étais actif avant, j'ai tout arrêté à un moment", pts:1}
+      ]
+    },
+    {
+      id:"sante_forme", section:"Remise en forme", text:"As-tu une contrainte de santé ou physique qui te préoccupe (dos, articulations, essoufflement) ?", type:"single",
+      options:[
+        {label:"Oui, et ça m'inquiète pour la suite", pts:2, signal:true},
+        {label:"Un peu, rien de grave pour l'instant", pts:1},
+        {label:"Non, aucune", pts:0}
+      ]
+    }
+  ]
+};
+
+/* ===========================
+   BUILD FLOW
+=========================== */
+let flow = []; // built dynamically once objectif is known
+let currentIndex = 0;
+const container = document.getElementById('quizContainer');
+
+function buildInitialFlow(){
+  flow = [...socleAvantObjectif];
+  renderFlow();
+}
+
+function renderFlow(){
+  container.innerHTML = '';
+  flow.forEach((q, i) => {
+    container.appendChild(renderQuestion(q, i));
+  });
+}
+
+function renderQuestion(q, i){
+  const div = document.createElement('div');
+  div.className = 'screen';
+  div.id = 'q-' + i;
+
+  let inner = '';
+  if(q.type === 'single'){
+    let optsHtml = '';
+    q.options.forEach((opt) => {
+      optsHtml += `<button class="opt" data-qid="${q.id}" data-pts="${opt.pts ?? 'null'}" data-value="${opt.value ?? ''}" data-signal="${opt.signal ? 'true':'false'}" onclick="selectOption(this, ${i})">
+        <span>${opt.label}</span><span class="opt-arrow">→</span>
+      </button>`;
+    });
+    inner = `<div class="options">${optsHtml}</div>`;
+  } else if(q.type === 'slider'){
+    inner = `
+      <div class="slider-wrap">
+        <div class="slider-value" id="sliderVal-${i}">5</div>
+        <input type="range" min="${q.min}" max="${q.max}" value="5" id="slider-${i}" oninput="updateSlider(${i})">
+        <div class="slider-scale"><span>${q.min} — pas envie</span><span>${q.max} — à fond</span></div>
+        <button class="slider-confirm" onclick="confirmSlider(${i}, '${q.id}')">Valider →</button>
+      </div>`;
+  } else if(q.type === 'number'){
+    inner = `
+      <input type="number" class="num-input" id="num-${i}" placeholder="${q.placeholder}">
+      <button class="btn-next" style="width:100%;" onclick="confirmNumber(${i}, '${q.id}')">Continuer →</button>`;
+  }
+
+  div.innerHTML = `
+    <div class="section-tag">${q.section}</div>
+    <div class="q-text">${q.text}</div>
+    ${q.sub ? `<div class="q-sub">${q.sub}</div>` : '<div style="margin-bottom:28px;"></div>'}
+    ${inner}
+    ${i > 0 ? `<div class="nav-row"><button class="btn-back" onclick="goBack(${i})">← Précédent</button></div>` : ''}
+  `;
+  return div;
+}
+
+function startQuiz(){
+  document.getElementById('screen-intro').classList.remove('active');
+  document.getElementById('topBar').style.display = 'flex';
+  buildInitialFlow();
+  showScreen(0);
+}
+
+function showScreen(index){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('q-' + index);
+  if(el) el.classList.add('active');
+  updateGauge(index);
+  currentIndex = index;
+  window.scrollTo(0,0);
+}
+
+function updateGauge(index){
+  // estimate total length: socle(5) + emotionnel(6) + branch(3) + capture(1) = 15 typical
+  const estimatedTotal = flow.length + (state.objectif ? 0 : 6 + 3) + 1;
+  const pct = Math.min(95, Math.round((index / estimatedTotal) * 100));
+  document.getElementById('gaugeFill').style.width = pct + '%';
+  document.getElementById('gaugeLabel').textContent = pct + '%';
+}
+
+function selectOption(btn, qIndex){
+  const qid = btn.getAttribute('data-qid');
+  const pts = btn.getAttribute('data-pts');
+  const value = btn.getAttribute('data-value');
+  const signal = btn.getAttribute('data-signal') === 'true';
+
+  if(pts !== 'null' && pts !== '' ){
+    state.engagementScore += parseInt(pts, 10);
+  }
+  if(signal) state.prioriteRdv = true;
+  state.answers[qid] = value || btn.textContent.trim();
+
+  btn.parentElement.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+
+  // special: objectif question triggers branch injection
+  if(qid === 'objectif' && value){
+    state.objectif = value;
+    setTimeout(() => {
+      injectRestOfFlow(qIndex);
+      advance(qIndex);
+    }, 280);
+    return;
+  }
+
+  setTimeout(() => advance(qIndex), 280);
+}
+
+function injectRestOfFlow(afterIndex){
+  // build remaining questions: emotionnel + branch for chosen objectif
+  const rest = [...socleEmotionnel, ...branches[state.objectif]];
+  flow = [...flow, ...rest];
+  // append new screens to DOM
+  rest.forEach((q, idx) => {
+    container.appendChild(renderQuestion(q, afterIndex + 1 + idx));
+  });
+}
+
+function updateSlider(qIndex){
+  document.getElementById('sliderVal-' + qIndex).textContent = document.getElementById('slider-' + qIndex).value;
+}
+
+function confirmSlider(qIndex, qid){
+  const val = parseInt(document.getElementById('slider-' + qIndex).value, 10);
+  let pts = 0;
+  if(val >= 9) pts = 5;
+  else if(val >= 7) pts = 4;
+  else if(val >= 5) pts = 3;
+  else if(val >= 3) pts = 1;
+  else pts = 0;
+  state.engagementScore += pts;
+  state.answers[qid] = val;
+  advance(qIndex);
+}
+
+function confirmNumber(qIndex, qid){
+  const val = document.getElementById('num-' + qIndex).value;
+  state.answers[qid] = val;
+  advance(qIndex);
+}
+
+function advance(qIndex){
+  if(qIndex < flow.length - 1){
+    showScreen(qIndex + 1);
+  } else {
+    document.getElementById('topBar').style.display = 'none';
+    showCapture();
+  }
+}
+
+function goBack(qIndex){
+  if(qIndex > 0) showScreen(qIndex - 1);
+  else {
+    document.getElementById('topBar').style.display = 'none';
+    document.getElementById('screen-intro').classList.add('active');
+  }
+}
+
+function showCapture(){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-capture').classList.add('active');
+  if(state.prioriteRdv){
+    document.getElementById('rdvBanner').classList.add('show');
+  }
+  window.scrollTo(0,0);
+}
+
+/* ===========================
+   CAPTURE SUBMIT → BREVO HOOK
+=========================== */
+async function submitCapture(){
+  const prenom = document.getElementById('capturePrenom').value.trim();
+  const email = document.getElementById('captureEmail').value.trim();
+  const tel = document.getElementById('captureTel').value.trim();
+  const submitBtn = document.querySelector('#screen-capture .btn-submit');
+
+  if(!prenom || !email){
+    alert("Merci de renseigner au moins ton prénom et ton email.");
+    return;
+  }
+
+  state.lead = { prenom, email, tel };
+
+  // Petit feedback visuel pendant l'envoi, pour éviter les double-clics
+  // et montrer que quelque chose se passe (réseau parfois lent en mobile)
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Envoi en cours...";
+  submitBtn.disabled = true;
+
+  await sendToBrevo(state);
+
+  submitBtn.textContent = originalText;
+  submitBtn.disabled = false;
+
+  showResult();
+}
+
+async function sendToBrevo(state){
+  // Appel à la fonction Netlify sécurisée — la clé API Brevo n'est
+  // jamais exposée côté navigateur, elle reste côté serveur.
+  try{
+    const response = await fetch('/.netlify/functions/submit-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prenom: state.lead.prenom,
+        email: state.lead.email,
+        tel: state.lead.tel,
+        objectif: state.objectif,
+        niveau: getNiveau(state.engagementScore),
+        source: 'quiz_diagnostic',
+        listId: LISTE_BREVO_DIAGNOSTIC
+      })
+    });
+
+    if(!response.ok){
+      console.error('Échec envoi Brevo, statut:', response.status);
+      // On ne bloque pas l'utilisateur même si l'envoi échoue —
+      // il voit son résultat quand même. L'erreur est juste loguée
+      // pour que Thomas puisse investiguer si besoin.
+    }
+  } catch(err){
+    console.error('Erreur réseau lors de l\'envoi vers Brevo:', err);
+  }
+}
+
+/* ===========================
+   RESULT RENDERING (modulaire)
+=========================== */
+const ouvertures = {
+  poids: "Tu veux perdre ce poids qui pèse autant sur le corps que sur le moral. Le problème n'est presque jamais la volonté — c'est l'absence d'un cadre qui tient sur la durée, sans te transformer en otage d'un régime.",
+  muscle: "Tu veux ce muscle qui se voit, pas juste celui qu'on devine sous le t-shirt. Le problème n'est presque jamais l'envie de s'entraîner — c'est l'absence de structure et de surcharge progressive réelle.",
+  recomp: "Tu veux les deux à la fois — moins de gras, plus de muscle — et c'est exactement ce que la plupart des méthodes classiques ne savent pas faire correctement. Ça demande une précision que le \"manger moins, bouger plus\" ne peut pas offrir.",
+  forme: "Tu ne cherches pas un physique de magazine, tu cherches à te sentir bien dans ton corps et dans ta vie. C'est en réalité l'objectif le plus sain — et aussi celui qui demande le plus de constance, pas d'intensité."
+};
+
+const niveaux = {
+  1: { label:"Indécis / ambivalent", body:"Tu n'es pas encore sûr de vouloir vraiment changer ça maintenant — et c'est normal, on n'agit jamais tant que la douleur ou le désir ne sont pas assez forts. Pas de pression : commence simplement par t'informer, sans engagement.", urgent:false },
+  2: { label:"Conscient mais pas pressé", body:"Tu sais que ça doit changer, mais ça reste abstrait, pas urgent. C'est souvent à ce stade qu'on a juste besoin d'un cadre clair pour transformer la conscience en action concrète, sans bouleverser toute sa vie.", urgent:false },
+  3: { label:"Motivé, cherche une structure", body:"Tu es prêt à t'y mettre, mais seul face à 50 sources contradictoires, on se perd vite. Ce qu'il te faut maintenant, c'est un système clair, pas une motivation supplémentaire que tu as déjà.", urgent:false },
+  4: { label:"Engagé, prêt à investir", body:"Tu n'es plus dans la réflexion, tu es dans l'action. Ce qui compte maintenant, c'est l'exécution et un accompagnement qui s'adapte à ta vraie vie — pas un programme générique de plus.", urgent:false },
+  5: { label:"Urgence ressentie", body:"Ce que tu ressens là n'est pas anodin — et il ne faut pas attendre que ça s'aggrave avant d'agir. C'est exactement le moment où je peux le plus t'aider directement, sans détour.", urgent:true }
+};
+
+function getNiveau(score){
+  // raw max ~ 4+4+4+3+5+5+3 = 28 (incluant la question accompagnement)
+  if(score <= 6) return 1;
+  if(score <= 12) return 2;
+  if(score <= 18) return 3;
+  if(score <= 23) return 4;
+  return 5;
+}
+
+function showResult(){
+  const niveauNum = getNiveau(state.engagementScore);
+  const niveau = niveaux[niveauNum];
+  const objectifLabel = {poids:"Perte de poids", muscle:"Prise de muscle", recomp:"Recomposition", forme:"Remise en forme"}[state.objectif];
+
+  document.getElementById('resultTag').textContent = `${objectifLabel} — Niveau ${niveauNum}/5 : ${niveau.label}`;
+  document.getElementById('resultTitle').textContent = state.lead.prenom + ", voici ton diagnostic.";
+
+  let bodyHtml = `<p>${ouvertures[state.objectif]}</p><p>${niveau.body}</p>`;
+  document.getElementById('resultBody').innerHTML = bodyHtml;
+
+  let ctaHtml = '';
+  if(niveau.urgent){
+    ctaHtml = `<a href="${LINKS.calendly}" class="cta-urgent">Réserver mon bilan maintenant →</a>
+                <a href="${LINKS.ebookEmail}" class="cta-secondary">Recevoir l'ebook gratuit →</a>
+                <a href="${LINKS.candidature}" class="cta-secondary">Déposer ma candidature →</a>`;
+  } else {
+    ctaHtml = `<a href="${LINKS.ebookEmail}" class="cta-primary">Recevoir l'ebook gratuit →</a>
+                <a href="${LINKS.calendly}" class="cta-secondary">Réserver mon bilan offert →</a>
+                <a href="${LINKS.candidature}" class="cta-secondary">Déposer ma candidature →</a>`;
+  }
+  document.getElementById('resultCtas').innerHTML = ctaHtml;
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-result').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function restartQuiz(){
+  state = { objectif:null, engagementScore:0, prioriteRdv:false, answers:{} };
+  flow = [];
+  currentIndex = 0;
+  container.innerHTML = '';
+  document.getElementById('rdvBanner').classList.remove('show');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-intro').classList.add('active');
+  window.scrollTo(0,0);
+}
+</script>
+
+</body>
+</html>
