@@ -563,23 +563,50 @@ function startQuiz(){
 }
 
 function showScreen(index){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('q-' + index);
-  if(el) el.classList.add('active');
+  if(!el){
+    // Garde-fou : si l'écran cible n'existe pas encore dans le DOM
+    // (peut arriver si advance() est appelé avant la fin de l'injection
+    // des questions de la branche), on retente une fois après un court
+    // délai plutôt que de rester bloqué sur un écran vide.
+    console.warn('Écran q-' + index + ' introuvable, nouvelle tentative...');
+    setTimeout(() => {
+      const retryEl = document.getElementById('q-' + index);
+      if(retryEl){
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        retryEl.classList.add('active');
+        updateGauge(index);
+        currentIndex = index;
+        window.scrollTo(0,0);
+      } else {
+        console.error('Écran q-' + index + ' toujours introuvable après nouvelle tentative.');
+      }
+    }, 150);
+    return;
+  }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
   updateGauge(index);
   currentIndex = index;
   window.scrollTo(0,0);
 }
 
 function updateGauge(index){
-  // estimate total length: socle(5) + emotionnel(6) + branch(3) + capture(1) = 15 typical
-  const estimatedTotal = flow.length + (state.objectif ? 0 : 6 + 3) + 1;
+  // flow.length est déjà recalculé dynamiquement une fois la branche
+  // injectée (voir injectRestOfFlow). On ajoute +1 pour l'étape de
+  // capture finale qui suit toujours la dernière question.
+  const estimatedTotal = flow.length + 1;
   const pct = Math.min(95, Math.round((index / estimatedTotal) * 100));
   document.getElementById('gaugeFill').style.width = pct + '%';
   document.getElementById('gaugeLabel').textContent = pct + '%';
 }
 
 function selectOption(btn, qIndex){
+  // Garde-fou : ignore les clics si on n'est plus sur l'écran courant
+  // (évite les doubles-clics ou clics pendant une transition qui
+  // causaient des appels advance() avec un index obsolète)
+  if(qIndex !== currentIndex) return;
+
   const qid = btn.getAttribute('data-qid');
   const pts = btn.getAttribute('data-pts');
   const value = btn.getAttribute('data-value');
@@ -589,8 +616,9 @@ function selectOption(btn, qIndex){
     state.engagementScore += parseInt(pts, 10);
   }
   if(signal) state.prioriteRdv = true;
-  state.answers[qid] = value || btn.textContent.trim();
+  state.answers[qid] = value || btn.querySelector('span').textContent.trim();
 
+  btn.parentElement.querySelectorAll('.opt').forEach(o => o.style.pointerEvents = 'none');
   btn.parentElement.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
   btn.classList.add('selected');
 
