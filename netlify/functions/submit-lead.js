@@ -71,7 +71,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const response = await fetch("https://api.brevo.com/v3/contacts", {
+    let response = await fetch("https://api.brevo.com/v3/contacts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -89,7 +89,48 @@ exports.handler = async function (event) {
       };
     }
 
-    const errorBody = await response.text();
+    let errorBody = await response.text();
+
+    // Si l'échec est spécifiquement lié à un doublon sur le numéro SMS,
+    // on retente sans ce champ : mieux vaut capturer le lead avec son
+    // email que de tout perdre pour un conflit de téléphone.
+    let parsedError;
+    try { parsedError = JSON.parse(errorBody); } catch(e) { parsedError = {}; }
+
+    if (
+      response.status === 400 &&
+      parsedError.code === "duplicate_parameter" &&
+      parsedError.metadata &&
+      parsedError.metadata.duplicate_identifiers &&
+      parsedError.metadata.duplicate_identifiers.includes("SMS")
+    ) {
+      console.warn("SMS en doublon détecté, nouvelle tentative sans le numéro de téléphone");
+      const payloadWithoutSms = {
+        ...payload,
+        attributes: { ...payload.attributes },
+      };
+      delete payloadWithoutSms.attributes.SMS;
+
+      response = await fetch("https://api.brevo.com/v3/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "api-key": BREVO_API_KEY,
+        },
+        body: JSON.stringify(payloadWithoutSms),
+      });
+
+      if (response.status === 201 || response.status === 204) {
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ success: true, warning: "Contact créé sans le numéro de téléphone (déjà utilisé ailleurs)" }),
+        };
+      }
+
+      errorBody = await response.text();
+    }
+
     console.error("Erreur Brevo:", response.status, errorBody);
     return {
       statusCode: 502,
